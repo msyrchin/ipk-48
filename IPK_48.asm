@@ -73,16 +73,13 @@ PRE:	st	Z+,r17
 	ldi	r19,4
 	rcall	_RD
 
-;востановление констант	
-	clr	r16
-	sts	N_MEM,r16
 	
 PRE_1:
 	ldi	r16,M_MEM	;младший байт адреса в EERAM
 	ldi	r28,low(N_MEM)	;адрес ОЗУ в RAM
 	ldi	r29,high(N_MEM)	;
 	ldi	r19,1		;количество считываемых байтов памяти
-	rcall	EE_RD
+	rcall	_RD
 	lds	r17,N_MEM	;№ смещения адресов констант в EERAM
 	cpi	r17,10
 	brlo	pre_5
@@ -93,13 +90,13 @@ PRE_1:
 	ldi	r28,low(N_MEM)
 	ldi	r29,high(N_MEM)
 	ldi	r19,1
-	rcall	EE_WRT	
-
+	rcall	_WRT	
+	
 pre_5:
 	ldi	r16,M_STP_L	;начальный адрес констант в EERAM
 	ldi	r28,low(STP_L)	;адрес ОЗУ для STP в RAM
 	ldi	r29,high(STP_L)	;
-	ldi	r19,14		;количество считываемых байтов памяти
+	ldi	r19, M_K_TM_H - M_STP_L + 1	;количество считываемых байтов памяти
 	rcall	EE_RD
 	clr	r16
 	sts	W_BIT_H,r16
@@ -112,13 +109,13 @@ pre_5:
 
 ;проверка размерности шага
 PRE_2:	lds	r16,STP_H
-	cpi	r16,0x16
+	cpi	r16,STP_H_MAX
 	brsh	PRE_3
-	cpi	r16,0x01
+	cpi	r16,STP_H_MIN
 	brlo	PRE_3
 	rjmp	PRE_4
 
-PRE_3:	ldi	r16,0x10
+PRE_3:	ldi	r16,STP_H_DEF
 	sts	STP_H,r16
 	clr	r16
 	sts	STP_L,r16
@@ -671,22 +668,23 @@ STP_INC:
 	lds	r17,ST_STP_L
 	add	r17,r16
 	sts	ST_STP_L,r17
-	brcc	INK_1
+	brcc	STP_INC_EXIT
 
 	clr	r16
 	lds	r17,ST_STP_M
 	adc	r17,r16
 	sts	ST_STP_M,r17
-	brcc	INK_1
+	brcc	STP_INC_EXIT
 
 	lds	r17,ST_STP_H
 	adc	r17,r16
 	sts	ST_STP_H,r17
-	brcc	INK_1
+	brcc	STP_INC_EXIT
 
 	lds	r17,ST_STP_Z
 	adc	r17,r16
 	sts	ST_STP_Z,r17
+STP_INC_EXIT:
 	ret
 
 ;-----------------------------------------------------------------------
@@ -1058,10 +1056,11 @@ EE_WRT:
 	lds	r17,N_MEM
 	swap	r17
 	or	r16,r17
+_WRT: 
 	cli
-
-_WRT:	sbic	EECR,EEWE
-	rjmp	_WRT
+_WRT_EE_LOOP: 
+	sbic	EECR,EEWE
+	rjmp	_WRT_EE_LOOP
 	out	EEARL,r16
 	ld	r18,Y+
 	out	EEDR,r18
@@ -1070,7 +1069,7 @@ _WRT:	sbic	EECR,EEWE
 	inc	r16
 	dec	r19
 	tst	r19
-	brne	_WRT
+	brne _WRT_EE_LOOP
 
 	sei
 	ret	
@@ -1080,10 +1079,11 @@ EE_RD:
 	lds	r17,N_MEM
 	swap	r17
 	or	r16,r17
+_RD:
 	cli
-
-_RD:	sbic	EECR,EEWE	;if EEWE not clear
-	rjmp	_RD
+_RD_EE_LOOP:
+	sbic	EECR,EEWE	;if EEWE not clear
+	rjmp	_RD_EE_LOOP
 	out	EEARL,r16	;output address low for 48
 	sbi	EECR,EERE	;set EEPROM Read strobe
 	in	r18,EEDR	;get data
@@ -1091,7 +1091,7 @@ _RD:	sbic	EECR,EEWE	;if EEWE not clear
 	inc	r16
 	dec	r19
 	tst	r19
-	brne	_RD
+	brne _RD_EE_LOOP
 
 	sei
 	ret

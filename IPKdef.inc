@@ -13,7 +13,8 @@
 .equ	M_K_NAT_H	=$0D		
 .equ	M_K_TM_L	=$0E		
 .equ	M_K_TM_H	=$0F		
-				
+
+; Глубина и номер конфигурации в EEPROM				
 .equ	M_GL_L		=$f0		
 .equ	M_GL_M		=$f1		
 .equ	M_GL_H		=$f2		
@@ -173,4 +174,10 @@
 .def	CLK_H		=r11
 
 .def	R_BIT		=r22
+
+; Границы значений шага квантования
+; Это BCD значения !!!! 
+.equ	STP_H_MAX	=0x16
+.equ	STP_H_MIN	=0x01
+.equ	STP_H_DEF	=0x10
 
